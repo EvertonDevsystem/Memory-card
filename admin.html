@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Jogo da Memória</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --primary-color: #00ffcc;
+            --secondary-color: #00c6ff;
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Tela de Login do Admin */
+        #loginScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            gap: 15px;
+        }
+
+        #loginScreen input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+        }
+
+        /* Container do Painel */
+        .admin-container {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header-admin {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .header-admin h1 {
+            color: var(--primary-color);
+            font-size: 1.6rem;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+
+        .card-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-panel h3 {
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .stat-box span {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        th {
+            color: var(--secondary-color);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--secondary-color), #0072ff);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-group input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            color: white;
+            outline: none;
+        }
+
+        .back-link {
+            margin-top: 20px;
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Autenticação -->
+    <div id="loginScreen">
+        <h2 style="color: var(--primary-color); margin-bottom: 10px;">Painel Restrito</h2>
+        <p style="color: #aaa; margin-bottom: 15px;">Digite a senha de administrador</p>
+        <input type="password" id="adminPassword" placeholder="Senha..." onkeypress="checkEnter(event)">
+        <button class="btn" onclick="fazerLogin()">Entrar</button>
+        <a href="index.html" class="back-link">← Voltar para o Jogo</a>
+    </div>
+
+    <!-- Painel de Administração Principal -->
+    <div id="adminPanel" class="admin-container">
+        <div class="header-admin">
+            <h1>Painel de Controlo - Admin</h1>
+            <button class="btn btn-danger" onclick="sairAdmin()">Sair</button>
+        </div>
+
+        <!-- Estatísticas -->
+        <div class="card-panel">
+            <h3>Estatísticas do Sistema</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <p>Total de Recordes (4x4)</p>
+                    <span id="stat4x4">0</span>
+                </div>
+                <div class="stat-box">
+                    <p>Total de Recordes (6x6)</p>
+                    <span id="stat6x6">0</span>
+                </div>
+                <div class="stat-box">
+                    <p>Total de Recordes (8x8)</p>
+                    <span id="stat8x8">0</span>
+                </div>
+            </div>
+            <button class="btn btn-danger" onclick="limparTodosRecordes()">🗑️ Limpar Todos os Recordes</button>
+        </div>
+
+        <!-- Gestão de Recordes por Modo -->
+        <div class="card-panel">
+            <h3>Visualizar Recordes (Top 10)</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="mudarTabRanking('4x4')">Modo 4x4</button>
+                <button class="btn" onclick="mudarTabRanking('6x6')">Modo 6x6</button>
+                <button class="btn" onclick="mudarTabRanking('8x8')">Modo 8x8</button>
+            </div>
+            <h4 id="rankingTitleLabel" style="color: var(--primary-color); margin-bottom: 5px;">Modo: 4x4</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Posição</th>
+                        <th>Tentativas</th>
+                        <th>Tempo</th>
+                    </tr>
+                </thead>
+                <tbody id="adminRankingTable">
+                    <tr><td colspan="3">Nenhum recorde encontrado</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Gerenciamento de Imagens -->
+        <div class="card-panel">
+            <h3>Adicionar Nova Imagem de Anime</h3>
+            <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 10px;">Adicione o caminho relativo ou URL de uma imagem para o jogo.</p>
+            <div class="form-group">
+                <input type="text" id="nuevaImageUrl" placeholder="Ex: ../images/NOVA_IMAGEM.JPG">
+                <button class="btn" onclick="adicionarImagem()">Adicionar</button>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="index.html" class="back-link">← Voltar para o Jogo da Memória</a>
+        </div>
+    </div>
+
+    <script>
+        function checkEnter(e) {
+            if (e.key === 'Enter') fazerLogin();
+        }
+
+        function fazerLogin() {
+            const senhaInput = document.getElementById('adminPassword').value;
+            if (senhaInput === "Aura memory") {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'flex';
+                carregarDadosAdmin();
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
+
+        function sairAdmin() {
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        let modoAtualRanking = '4x4';
+
+        function carregarDadosAdmin() {
+            // Contagem de recordes
+            const r4x4 = JSON.parse(localStorage.getItem('ranking_4x4x4')) || []; // Ajustado para chave correta do jogo
+            const r6x6 = JSON.parse(localStorage.getItem('ranking_6x6')) || [];
+            const r8x8 = JSON.parse(localStorage.getItem('ranking_8x8')) || [];
+
+            document.getElementById('stat4x4').textContent = r4x4.length;
+            document.getElementById('stat6x6').textContent = r6x6.length;
+            document.getElementById('stat8x8').textContent = r8x8.length;
+
+            renderizarTabelaAdmin(modoAtualRanking);
+        }
+
+        function mudarTabRanking(modo) {
+            modoAtualRanking = modo;
+            document.getElementById('rankingTitleLabel').textContent = `Modo: ${modo}`;
+            renderizarTabelaAdmin(modo);
+        }
+
+        function renderizarTabelaAdmin(modo) {
+            const key = `ranking_${modo}`;
+            let ranking = JSON.parse(localStorage.getItem(key)) || [];
+            const tbody = document.getElementById('adminRankingTable');
+            tbody.innerHTML = "";
+
+            if (ranking.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3">Nenhum recorde registrado para ${modo}</td></tr>`;
+                return;
+            }
+
+            ranking.forEach((item, index) => {
+                let min = Math.floor(item.seconds / 60).toString().padStart(2, '0');
+                let sec = (item.seconds % 60).toString().padStart(2, '0');
+                let tempoFormatado = `${min}:${sec}`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${index + 1}</td>
+                    <td>${item.tentativas}</td>
+                    <td>${tempoFormatado}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function limparTodosRecordes() {
+            if (confirm("Tem certeza que deseja apagar todos os recordes do jogo?")) {
+                localStorage.removeItem('ranking_4x4');
+                localStorage.removeItem('ranking_6x6');
+                localStorage.removeItem('ranking_8x8');
+                carregarDadosAdmin();
+                alert("Todos os recordes foram limpos com sucesso!");
+            }
+        }
+
+        function adicionarImagem() {
+            const urlInput = document.getElementById('nuevaImageUrl').value.trim();
+            if (!urlInput) {
+                alert("Por favor, insira um caminho ou URL válido.");
+                return;
+            }
+
+            let customImages = JSON.parse(localStorage.getItem('customAnimeImages')) || [];
+            customImages.push(urlInput);
+            localStorage.setItem('customAnimeImages', JSON.stringify(customImages));
+            
+            document.getElementById('nuevaImageUrl').value = '';
+            alert("Imagem adicionada com sucesso ao armazenamento local!");
+        }
+    </script>
+</body>
+</html>

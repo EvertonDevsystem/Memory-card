@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jogo da Memória</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(255, 255, 255, 0.05);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --primary-color: #00ffcc;
+            --secondary-color: #00c6ff;
+            --card-front: #1a233a;
+            --card-back: #2a3b5f;
+            --text-color: #ffffff;
+            --max-container-width: 500px;
+        }
+
+        /* Modos de Layout Personalizados */
+        body.layout-pc {
+            --max-container-width: 650px;
+        }
+
+        body.layout-mobile {
+            --max-container-width: 360px;
+        }
+
+        /* Temas de Fundo */
+        body.theme-purple {
+            --bg-color: #120a1f;
+            --primary-color: #ff00ff;
+            --secondary-color: #9933ff;
+            --card-front: #251238;
+            --card-back: #3d1f5c;
+        }
+
+        body.theme-minimal {
+            --bg-color: #121212;
+            --primary-color: #ffffff;
+            --secondary-color: #888888;
+            --card-front: #1e1e1e;
+            --card-back: #2d2d2d;
+        }
+
+        body.theme-sakura {
+            --bg-color: #1a0f1a;
+            --primary-color: #ff69b4;
+            --secondary-color: #ff1493;
+            --card-front: #2d162d;
+            --card-back: #4a224a;
+        }
+
+        body.theme-fire {
+            --bg-color: #1a0b0b;
+            --primary-color: #ff4500;
+            --secondary-color: #ff8c00;
+            --card-front: #2e1414;
+            --card-back: #4d2222;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 15px;
+            transition: background 0.3s;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Canvas para Animações Dinâmicas */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Top Bar Responsiva */
+        .top-bar {
+            width: 100%;
+            max-width: var(--max-container-width);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            z-index: 10;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+            font-size: 1.5rem;
+        }
+
+        .menu-buttons-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .menu-icon-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            font-size: 1.2rem;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .menu-icon-btn:hover {
+            background: var(--border-color);
+        }
+
+        /* Menus Laterais (Drawers) */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 310px;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.98);
+            background-color: #0b0f19;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.6);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .side-menu.open {
+            right: 0;
+        }
+
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .menu-header h2 {
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .close-menu-btn {
+            background: rgba(255, 50, 50, 0.2);
+            border: 1px solid rgba(255, 50, 50, 0.4);
+            color: #ff6b6b;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            width: 100%;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .close-icon {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .menu-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* Botão Acordeão */
+        .accordion-btn {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+            text-align: left;
+        }
+
+        .accordion-btn:hover {
+            background: var(--border-color);
+        }
+
+        .accordion-btn span.arrow {
+            transition: transform 0.3s;
+            font-size: 0.8rem;
+        }
+
+        /* Conteúdo Expansível */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .accordion-content.open {
+            max-height: 350px;
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .menu-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .anim-option-btn span.emoji-symbol {
+            font-size: 1.3rem;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        /* Seletor de Cores RGB e Inputs Admin */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+        }
+
+        .color-picker-wrapper label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 35px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .admin-text-input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        /* Botões Gerais */
+        button.action-btn {
+            background: linear-gradient(135deg, var(--secondary-color), #0072ff);
+            border: none;
+            color: white;
+            padding: 11px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: 0.3s;
+            text-align: left;
+            width: 100%;
+        }
+
+        button.action-btn:hover {
+            opacity: 0.9;
+        }
+
+        button.action-btn.active {
+            background: linear-gradient(135deg, var(--primary-color), #00b386);
+            color: #0b0f19;
+        }
+
+        .info-panel {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            background: var(--panel-bg);
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            z-index: 10;
+            text-align: center;
+            width: 100%;
+            max-width: var(--max-container-width);
+        }
+
+        /* Tabuleiro Responsivo */
+        #tabuleiro {
+            display: grid;
+            gap: 8px;
+            perspective: 1000px;
+            margin-bottom: 20px;
+            z-index: 10;
+            justify-content: center;
+            width: 100%;
+            max-width: var(--max-container-width);
+        }
+
+        .carta {
+            width: var(--card-size, 75px);
+            height: var(--card-size, 75px);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s;
+            cursor: pointer;
+        }
+
+        .carta.virada {
+            transform: rotateY(180deg);
+        }
+
+        .carta .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .carta .costas {
+            background: var(--card-front);
+            border: 2px solid var(--primary-color);
+            font-size: 1.4rem;
+        }
+
+        .carta .frente {
+            background: var(--card-back);
+            transform: rotateY(180deg);
+            -webkit-transform: rotateY(180deg);
+            border: 2px solid var(--secondary-color);
+        }
+
+        .carta .frente img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .carta.par-encontrado {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 6px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        th {
+            color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bgCanvas"></canvas>
+
+    <div class="top-bar">
+        <h1>Jogo da Memória</h1>
+        <div class="menu-buttons-group">
+            <button class="menu-icon-btn" onclick="toggleMenu('mainMenu')" title="Menu Principal">☰</button>
+            <button class="menu-icon-btn" id="btnTop10Icon" onclick="toggleMenu('top10Menu')" title="Top 10 Recordes">🏆</button>
+        </div>
+    </div>
+
+    <!-- Menu Principal -->
+    <div id="mainMenu" class="side-menu">
+        <div class="menu-header">
+            <h2>Menu Principal</h2>
+            <button class="close-icon" onclick="toggleMenu('mainMenu')">✕</button>
+        </div>
+
+        <button class="close-menu-btn" onclick="toggleMenu('mainMenu')">Fechar Menu</button>
+
+        <!-- Acordeão: Modo de Jogo -->
+        <div class="menu-section">
+            <button class="accordion-btn" onclick="toggleAccordion('acc-modo')">
+                <span>🎮 Modo de Jogo</span>
+                <span class="arrow" id="arrow-acc-modo">▼</span>
+            </button>
+            <div id="acc-modo" class="accordion-content">
+                <button class="action-btn active" onclick="mudarDificuldade(4)" id="btn-4">🎮 4x4 (Fácil)</button>
+                <button class="action-btn" onclick="mudarDificuldade(6)" id="btn-6">🎮 6x6 (Médio)</button>
+                <button class="action-btn" onclick="mudarDificuldade(8)" id="btn-8">🎮 8x8 (Difícil)</button>
+            </div>
+        </div>
+
+        <!-- Acordeão: Padrão de Tela / Layout -->
+        <div class="menu-section">
+            <button class="accordion-btn" onclick="toggleAccordion('acc-layout')">
+                <span>📱 Padrão de Tela</span>
+                <span class="arrow" id="arrow-acc-layout">▼</span>
+            </button>
+            <div id="acc-layout" class="accordion-content">
+                <button class="action-btn active" id="layout-auto" onclick="mudarLayout('auto')">📱 Automático (Responsivo)</button>
+                <button class="action-btn" id="layout-pc" onclick="mudarLayout('pc')">💻 Forçar Estilo PC</button>
+                <button class="action-btn" id="layout-mobile" onclick="mudarLayout('mobile')">📱 Forçar Estilo Celular</button>
+            </div>
+        </div>
+
+        <!-- Acordeão: Tela de Fundo / Tema -->
+        <div class="menu-section">
+            <button class="accordion-btn" onclick="toggleAccordion('acc-tema')">
+                <span>🌌 Tela de Fundo / Tema</span>
+                <span class="arrow" id="arrow-acc-tema">▼</span>
+            </button>
+            <div id="acc-tema" class="accordion-content">
+                <button class="action-btn" onclick="mudarTema('cyber')">🌌 Cyber Neon</button>
+                <button class="action-btn" onclick="mudarTema('purple')">🔮 Galáxia Roxa</button>
+                <button class="action-btn" onclick="mudarTema('sakura')">🌸 Sakura (Rosa)</button>
+                <button class="action-btn" onclick="mudarTema('fire')">🔥 Fogo Infernal</button>
+                <button class="action-btn" onclick="mudarTema('minimal')">🖤 Minimalista Escuro</button>
+            </div>
+        </div>
+
+        <!-- Acordeão: Animação de Fundo -->
+        <div class="menu-section">
+            <button class="accordion-btn" onclick="toggleAccordion('acc-anim')">
+                <span>✨ Animação de Fundo</span>
+                <span class="arrow" id="arrow-acc-anim">▼</span>
+            </button>
+            <div id="acc-anim" class="accordion-content">
+                <button class="action-btn active anim-option-btn" id="anim-particles" onclick="mudarAnimacao('particles')"><span class="emoji-symbol">✨</span> Partículas Neon</button>
+                <button class="action-btn anim-option-btn" id="anim-matrix" onclick="mudarAnimacao('matrix')"><span class="emoji-symbol">🌧️</span> Chuva Digital</button>
+                <button class="action-btn anim-option-btn" id="anim-stars" onclick="mudarAnimacao('stars')"><span class="emoji-symbol">⭐</span> Estrelas Cadentes</button>
+                <button class="action-btn anim-option-btn" id="anim-waves" onclick="mudarAnimacao('waves')"><span class="emoji-symbol">🌊</span> Ondas Fluídas</button>
+                <button class="action-btn anim-option-btn" id="anim-off" onclick="mudarAnimacao('off')"><span class="emoji-symbol">❌</span> Desligada</button>
+            </div>
+        </div>
+
+        <!-- Configuração de Cores RGB -->
+        <div class="menu-section">
+            <div class="color-picker-wrapper">
+                <label for="colorPicker">Cor da Animação:</label>
+                <input type="color" id="colorPicker" value="#00ffcc" onchange="mudarCorCustomizada(this.value)">
+            </div>
+        </div>
+
+        <!-- Recursos -->
+        <div class="menu-section">
+            <div class="menu-options">
+                <button class="action-btn active" id="btnTop10Toggle" onclick="toggleTop10Feature()">🏆 Top 10: Habilitado</button>
+            </div>
+        </div>
+
+        <!-- Administração -->
+        <div class="menu-section">
+            <div class="menu-options">
+                <button class="action-btn" onclick="abrirAdminMenu()" style="background: linear-gradient(135deg, #7f00ff, #e100ff);">🛡️ Painel Admin</button>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="menu-section">
+            <div class="menu-options">
+                <button class="action-btn" onclick="reiniciarJogo()" style="background: linear-gradient(135deg, #ff416c, #ff4b2b);">🔄 Reiniciar Jogo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu do Top 10 -->
+    <div id="top10Menu" class="side-menu">
+        <div class="menu-header">
+            <h2>🏆 Top 10 Recordes</h2>
+            <button class="close-icon" onclick="toggleMenu('top10Menu')">✕</button>
+        </div>
+
+        <button class="close-menu-btn" onclick="toggleMenu('top10Menu')">Fechar Menu</button>
+
+        <div class="menu-section" style="margin-top: 10px;">
+            <h3>Modo Atual: <span id="drawerModeLabel">4x4</span></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tentativas</th>
+                        <th>Tempo</th>
+                    </tr>
+                </thead>
+                <tbody id="drawerRankingTable">
+                    <tr><td colspan="3">Nenhum recorde registado ainda</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Menu do Painel Admin -->
+    <div id="adminMenu" class="side-menu">
+        <div class="menu-header">
+            <h2>🛡️ Painel Admin</h2>
+            <button class="close-icon" onclick="toggleMenu('adminMenu')">✕</button>
+        </div>
+
+        <button class="close-menu-btn" onclick="toggleMenu('adminMenu')">Fechar Menu</button>
+
+        <div class="menu-section" style="margin-top: 10px;">
+            <h3>Estatísticas</h3>
+            <div style="font-size: 0.9rem; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px;">
+                <span>Recordes 4x4: <strong id="statAdmin4x4">0</strong></span>
+                <span>Recordes 6x6: <strong id="statAdmin6x6">0</strong></span>
+                <span>Recordes 8x8: <strong id="statAdmin8x8">0</strong></span>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h3>Adicionar Imagem Diretamente</h3>
+            <div class="menu-options">
+                <input type="text" id="novaImageUrl" class="admin-text-input" placeholder="URL ou Caminho (ex: ../images/foto.jpg)">
+                <button class="action-btn" onclick="adicionarImagemDireta()" style="background: linear-gradient(135deg, #00c6ff, #0072ff);">➕ Adicionar Imagem</button>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h3>Sistema</h3>
+            <div class="menu-options">
+                <button class="action-btn" onclick="redefinirConfiguracoes()" style="background: linear-gradient(135deg, #ff9900, #ff5500);">⚙️ Redefinir Definições</button>
+                <button class="action-btn" onclick="redefinirInterfaceGeral()" style="background: linear-gradient(135deg, #cc0000, #660000);">🔒 Redefinir Interface Geral</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <span id="timer">Tempo: 00:00</span>
+        <span>|</span>
+        <span>Tentativas: <strong id="contador">0</strong></span>
+        <span>|</span>
+        <span>Pares: <strong id="pares">0</strong>/ <span id="totalPares">8</span></span>
+    </div>
+
+    <div id="tabuleiro"></div>
+
+    <script>
+        const imagensPredefinidas = [
+            { img: "../images/BEATRICE.JPG" },
+            { img: "../images/echidna.png" },
+            { img: "../images/emilia.jpg" },
+            { img: "../images/esdeath.jpeg" },
+            { img: "../images/pm.jpg" },
+            { img: "../images/REINHARD.JPG" },
+            { img: "../images/ren.png" },
+            { img: "../images/suba.jpg" }
+        ];
+
+        let imagensBase = [];
+
+        function carregarImagensDoJogo() {
+            let customImages = JSON.parse(localStorage.getItem('customAnimeImages')) || [];
+            let base = customImages.length > 0 ? customImages.map(url => ({ img: url })) : imagensPredefinidas;
+            
+            imagensBase = [];
+            while (imagensBase.length < 32) {
+                imagensBase = imagensBase.concat(base);
+            }
+        }
+
+        let gridSize = 4;
+        let totalPares = 8;
+        let cartas = [];
+        let cartasViradas = [];
+        let paresEncontrados = 0;
+        let tentativas = 0;
+        let bloqueado = false;
+        
+        let timer = null;
+        let seconds = 0;
+        let gameStarted = false;
+        let tipoAnimacao = localStorage.getItem('gameAnimType') || 'particles';
+        let top10Ativo = true;
+
+        const tabuleiro = document.getElementById('tabuleiro');
+        const timerDisplay = document.getElementById('timer');
+        const totalParesDisplay = document.getElementById('totalPares');
+        const drawerRankingTable = document.getElementById('drawerRankingTable');
+        const drawerModeLabel = document.getElementById('drawerModeLabel');
+        const btnTop10Icon = document.getElementById('btnTop10Icon');
+        const btnTop10Toggle = document.getElementById('btnTop10Toggle');
+        const colorPicker = document.getElementById('colorPicker');
+
+        // Configuração do Canvas Responsivo
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let animationFrameId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let particles = [];
+        let drops = [];
+        let stars = [];
+        let waveAngle = 0;
+
+        function initAnimationObjects() {
+            particles = [];
+            for(let i=0; i<25; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 3 + 1,
+                    speedY: (Math.random() * 1 + 0.5) * -1,
+                    alpha: Math.random() * 0.5 + 0.1
+                });
+            }
+
+            drops = [];
+            const cols = Math.floor(canvas.width / 20);
+            for(let i=0; i<cols; i++) {
+                drops[i] = Math.floor(Math.random() * canvas.height);
+            }
+
+            stars = [];
+            for(let i=0; i<30; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speedX: Math.random() * 2 + 1,
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function runAnimation() {
+            cancelAnimationFrame(animationFrameId);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const computedColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#00ffcc';
+
+            if (tipoAnimacao === 'particles') {
+                ctx.fillStyle = computedColor;
+                particles.forEach(p => {
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    p.y += p.speedY;
+                    if(p.y < 0) p.y = canvas.height;
+                });
+            } else if (tipoAnimacao === 'matrix') {
+                ctx.fillStyle = computedColor;
+                ctx.font = '14px monospace';
+                ctx.globalAlpha = 0.35;
+                drops.forEach((y, index) => {
+                    const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                    const x = index * 20;
+                    ctx.fillText(text, x, y);
+                    if(y > canvas.height && Math.random() > 0.975) drops[index] = 0;
+                    drops[index] += 20;
+                });
+            } else if (tipoAnimacao === 'stars') {
+                ctx.fillStyle = computedColor;
+                stars.forEach(s => {
+                    ctx.globalAlpha = s.alpha;
+                    ctx.fillRect(s.x, s.y, s.size, s.size);
+                    s.x -= s.speedX;
+                    if(s.x < 0) s.x = canvas.width;
+                });
+            } else if (tipoAnimacao === 'waves') {
+                ctx.strokeStyle = computedColor;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.2;
+                ctx.beginPath();
+                for(let x = 0; x < canvas.width; x += 15) {
+                    let y = canvas.height / 2 + Math.sin(x * 0.01 + waveAngle) * 40;
+                    if(x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                waveAngle += 0.03;
+            }
+
+            if (tipoAnimacao !== 'off') {
+                animationFrameId = requestAnimationFrame(runAnimation);
+            }
+        }
+
+        function mudarAnimacao(tipo) {
+            tipoAnimacao = tipo;
+            localStorage.setItem('gameAnimType', tipo);
+
+            ['particles', 'matrix', 'stars', 'waves', 'off'].forEach(t => {
+                const btn = document.getElementById(`anim-${t}`);
+                if(btn) btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(`anim-${tipo}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            initAnimationObjects();
+            runAnimation();
+        }
+
+        function mudarLayout(tipo) {
+            document.body.classList.remove('layout-pc', 'layout-mobile');
+            if (tipo !== 'auto') {
+                document.body.classList.add(`layout-${tipo}`);
+            }
+            localStorage.setItem('gameLayout', tipo);
+
+            ['auto', 'pc', 'mobile'].forEach(t => {
+                const btn = document.getElementById(`layout-${t}`);
+                if(btn) btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(`layout-${tipo}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            criarTabuleiro();
+        }
+
+        const savedLayout = localStorage.getItem('gameLayout') || 'auto';
+        mudarLayout(savedLayout);
+
+        function mudarCorCustomizada(corHex) {
+            document.documentElement.style.setProperty('--primary-color', corHex);
+            localStorage.setItem('gameCustomColor', corHex);
+            runAnimation();
+        }
+
+        const savedCustomColor = localStorage.getItem('gameCustomColor');
+        if (savedCustomColor) {
+            document.documentElement.style.setProperty('--primary-color', savedCustomColor);
+            colorPicker.value = savedCustomColor;
+        }
+
+        function toggleTop10Feature() {
+            top10Ativo = !top10Ativo;
+            if (top10Ativo) {
+                btnTop10Toggle.classList.add('active');
+                btnTop10Toggle.textContent = "🏆 Top 10: Habilitado";
+                btnTop10Icon.style.display = 'flex';
+            } else {
+                btnTop10Toggle.classList.remove('active');
+                btnTop10Toggle.textContent = "🏆 Top 10: Desabilitado";
+                btnTop10Icon.style.display = 'none';
+                document.getElementById('top10Menu').classList.remove('open');
+            }
+            localStorage.setItem('gameTop10', top10Ativo);
+        }
+
+        const savedTop10 = localStorage.getItem('gameTop10');
+        if (savedTop10 !== null) {
+            top10Ativo = (savedTop10 === 'true');
+            if (!top10Ativo) {
+                btnTop10Toggle.classList.remove('active');
+                btnTop10Toggle.textContent = "🏆 Top 10: Desabilitado";
+                btnTop10Icon.style.display = 'none';
+            }
+        }
+
+        // Função para alternar os acordeões do menu
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const arrow = document.getElementById('arrow-' + id);
+            content.classList.toggle('open');
+            if (content.classList.contains('open')) {
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function abrirAdminMenu() {
+            const senha = prompt("Digite a palavra-passe de administrador:");
+            if (senha === "Aura memory") {
+                toggleMenu('adminMenu');
+                carregarEstatisticasAdmin();
+            } else if (senha !== null) {
+                alert("Palavra-passe incorreta!");
+            }
+        }
+
+        function carregarEstatisticasAdmin() {
+            const r4x4 = JSON.parse(localStorage.getItem('ranking_4x4')) || [];
+            const r6x6 = JSON.parse(localStorage.getItem('ranking_6x6')) || [];
+            const r8x8 = JSON.parse(localStorage.getItem('ranking_8x8')) || [];
+
+            document.getElementById('statAdmin4x4').textContent = r4x4.length;
+            document.getElementById('statAdmin6x6').textContent = r6x6.length;
+            document.getElementById('statAdmin8x8').textContent = r8x8.length;
+        }
+
+        function adicionarImagemDireta() {
+            const urlInput = document.getElementById('novaImageUrl').value.trim();
+            if (!urlInput) {
+                alert("Insira um link ou caminho válido para a imagem.");
+                return;
+            }
+
+            let customImages = JSON.parse(localStorage.getItem('customAnimeImages')) || [];
+            customImages.push(urlInput);
+            localStorage.setItem('customAnimeImages', JSON.stringify(customImages));
+
+            document.getElementById('novaImageUrl').value = '';
+            alert("Imagem adicionada com sucesso! O jogo será reiniciado com a nova imagem.");
+            carregarImagensDoJogo();
+            reiniciarJogo();
+        }
+
+        function redefinirConfiguracoes() {
+            if (confirm("Deseja redefinir apenas as definições visuais e preferências? Os seus recordes serão mantidos.")) {
+                let rankingsTemp = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('ranking_')) {
+                        rankingsTemp[key] = localStorage.getItem(key);
+                    }
+                }
+                localStorage.clear();
+                for (let key in rankingsTemp) {
+                    localStorage.setItem(key, rankingsTemp[key]);
+                }
+                location.reload();
+            }
+        }
+
+        function redefinirInterfaceGeral() {
+            if (confirm("Tem certeza que deseja redefinir a interface geral e apagar todos os recordes e definições?")) {
+                localStorage.clear();
+                alert("Interface geral redefinida com sucesso!");
+                location.reload();
+            }
+        }
+
+        function toggleMenu(menuId) {
+            document.querySelectorAll('.side-menu').forEach(menu => {
+                if (menu.id !== menuId) menu.classList.remove('open');
+            });
+            document.getElementById(menuId).classList.toggle('open');
+        }
+
+        function mudarTema(tema) {
+            document.body.classList.remove('theme-purple', 'theme-minimal', 'theme-sakura', 'theme-fire');
+            if (tema !== 'cyber') {
+                document.body.classList.add(`theme-${tema}`);
+            }
+            
+            const novaCor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            colorPicker.value = novaCor;
+            
+            localStorage.setItem('gameTheme', tema);
+            localStorage.removeItem('gameCustomColor');
+            setTimeout(runAnimation, 50);
+        }
+
+        const savedTheme = localStorage.getItem('gameTheme');
+        if (savedTheme) mudarTema(savedTheme);
+
+        function mudarDificuldade(size) {
+            gridSize = size;
+            totalPares = (size * size) / 2;
+            totalParesDisplay.textContent = totalPares;
+            drawerModeLabel.textContent = `${size}x${size}`;
+
+            document.querySelectorAll('#acc-modo button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`btn-${size}`).classList.add('active');
+
+            toggleMenu('mainMenu');
+            reiniciarJogo();
+        }
+
+        function embaralhar(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function criarTabuleiro() {
+            stopTimer();
+            seconds = 0;
+            gameStarted = false;
+            timerDisplay.textContent = "Tempo: 00:00";
+
+            carregarImagensDoJogo();
+
+            let cardSize = 85;
+            if (gridSize === 6) cardSize = 58;
+            if (gridSize === 8) cardSize = 44;
+            
+            if (window.innerWidth < 400 || document.body.classList.contains('layout-mobile')) {
+                if (gridSize === 4) cardSize = 72;
+                if (gridSize === 6) cardSize = 48;
+                if (gridSize === 8) cardSize = 36;
+            } else if (document.body.classList.contains('layout-pc')) {
+                if (gridSize === 4) cardSize = 95;
+                if (gridSize === 6) cardSize = 65;
+                if (gridSize === 8) cardSize = 50;
+            }
+
+            document.documentElement.style.setProperty('--card-size', `${cardSize}px`);
+            tabuleiro.style.gridTemplateColumns = `repeat(${gridSize}, var(--card-size))`;
+            
+            tabuleiro.innerHTML = "";
+            cartasViradas = [];
+            paresEncontrados = 0;
+            tentativas = 0;
+            bloqueado = false;
+            atualizarContador();
+
+            let imagensSelecionadas = imagensBase.slice(0, totalPares);
+            cartas = embaralhar([...imagensSelecionadas, ...imagensSelecionadas]);
+
+            cartas.forEach((carta, indice) => {
+                const elemento = document.createElement('div');
+                elemento.classList.add('carta');
+                elemento.dataset.indice = indice;
+                elemento.innerHTML = `
+                    <div class="face costas">❓</div>
+                    <div class="face frente"><img src="${carta.img}" alt="Imagem" loading="lazy"></div>
+                `;
+                elemento.addEventListener('click', () => virarCarta(indice, elemento));
+                tabuleiro.appendChild(elemento);
+            });
+
+            carregarRanking();
+        }
+
+        function virarCarta(indice, elemento) {
+            if (bloqueado) return;
+            if (elemento.classList.contains('virada')) return;
+            if (elemento.classList.contains('par-encontrado')) return;
+            if (cartasViradas.length >= 2) return;
+
+            if (!gameStarted) {
+                iniciarTimer();
+                gameStarted = true;
+            }
+
+            elemento.classList.add('virada');
+            cartasViradas.push({ indice, elemento });
+
+            if (cartasViradas.length === 2) {
+                tentativas++;
+                atualizarContador();
+                verificarPar();
+            }
+        }
+
+        function verificarPar() {
+            bloqueado = true;
+            const [carta1, carta2] = cartasViradas;
+            const img1 = cartas[carta1.indice].img;
+            const img2 = cartas[carta2.indice].img;
+
+            if (img1 === img2) {
+                paresEncontrados++;
+                carta1.elemento.classList.add('par-encontrado');
+                carta2.elemento.classList.add('par-encontrado');
+                cartasViradas = [];
+                bloqueado = false;
+                atualizarContador();
+
+                if (paresEncontrados === totalPares) {
+                    stopTimer();
+                    if (top10Ativo) {
+                        salvarNoRanking(tentativas, seconds);
+                    }
+                    setTimeout(() => {
+                        alert(`🎉 Parabéns! Completou em ${tentativas} tentativas e ${formatarTempo(seconds)}!`);
+                    }, 300);
+                }
+            } else {
+                setTimeout(() => {
+                    carta1.elemento.classList.remove('virada');
+                    carta2.elemento.classList.remove('virada');
+                    cartasViradas = [];
+                    bloqueado = false;
+                }, 900);
+            }
+        }
+
+        function atualizarContador() {
+            document.getElementById('contador').textContent = tentativas;
+            document.getElementById('pares').textContent = paresEncontrados;
+        }
+
+        function iniciarTimer() {
+            stopTimer();
+            timer = setInterval(() => {
+                seconds++;
+                timerDisplay.textContent = `Tempo: ${formatarTempo(seconds)}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timer);
+        }
+
+        function formatarTempo(totalSegundos) {
+            let min = Math.floor(totalSegundos / 60).toString().padStart(2, '0');
+            let sec = (totalSegundos % 60).toString().padStart(2, '0');
+            return `${min}:${sec}`;
+        }
+
+        function reiniciarJogo() {
+            document.querySelectorAll('.side-menu').forEach(menu => menu.classList.remove('open'));
+            criarTabuleiro();
+        }
+
+        function salvarNoRanking(tentativasFeitas, tempoSegundos) {
+            const key = `ranking_${gridSize}x${gridSize}`;
+            let ranking = JSON.parse(localStorage.getItem(key)) || [];
+
+            ranking.push({ tentativas: tentativasFeitas, seconds: tempoSegundos });
+
+            ranking.sort((a, b) => {
+                if (a.tentativas !== b.tentativas) {
+                    return a.tentativas - b.tentativas;
+                }
+                return a.seconds - b.seconds;
+            });
+
+            ranking = ranking.slice(0, 10);
+            localStorage.setItem(key, JSON.stringify(ranking));
+            carregarRanking();
+        }
+
+        function carregarRanking() {
+            const key = `ranking_${gridSize}x${gridSize}`;
+            let ranking = JSON.parse(localStorage.getItem(key)) || [];
+
+            drawerRankingTable.innerHTML = "";
+
+            if (ranking.length === 0) {
+                drawerRankingTable.innerHTML = `<tr><td colspan="3">Nenhum recorde registado ainda</td></tr>`;
+                return;
+            }
+
+            ranking.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${index + 1}</td>
+                    <td>${item.tentativas}</td>
+                    <td>${formatarTempo(item.seconds)}</td>
+                `;
+                drawerRankingTable.appendChild(tr);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            ['particles', 'matrix', 'stars', 'waves', 'off'].forEach(t => {
+                const btn = document.getElementById(`anim-${t}`);
+                if(btn) btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(`anim-${tipoAnimacao}`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            criarTabuleiro();
+            initAnimationObjects();
+            runAnimation();
+        });
+    </script>
+</body>
+</html>
